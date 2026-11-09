@@ -15,7 +15,7 @@ class StudyMaterial(models.Model):
 
     title = models.CharField(max_length=180)
     subject = models.CharField(max_length=80)
-    class_level = models.CharField(max_length=20, choices=CLASS_LEVELS)
+    class_level = models.CharField(max_length=20)
     description = models.TextField()
     price = models.DecimalField(max_digits=8, decimal_places=2)
     cover_image = models.URLField(blank=True)
