@@ -1,0 +1,41 @@
+{% extends "public/base.html" %}
+
+{% block title %}My library — StudyNest{% endblock %}
+
+{% block content %}
+<section class="library-page">
+  <div class="library-heading">
+    <div><span class="eyebrow eyebrow-dark">YOUR PERSONAL SHELF</span><h1>My study library<span class="brand-dot">.</span></h1><p>All your notes, ready whenever you are.</p></div>
+    <a class="button button-dark" href="{% url 'public:catalog' %}">Find more notes <span aria-hidden="true">↗</span></a>
+  </div>
+  {% if purchases %}
+    <div class="material-grid library-grid">
+      {% for purchase in purchases %}
+        <article class="material-card">
+          <a class="cover-link" href="{% url 'public:detail' purchase.material.id %}">
+            {% if purchase.material.cover_image %}
+              <img class="material-cover" src="{{ purchase.material.cover_image }}" alt="{{ purchase.material.subject }} class notes cover" loading="lazy">
+            {% else %}
+              <div class="material-cover cover-placeholder cover-{{ forloop.counter|divisibleby:4|yesno:'four,one' }}"><span class="cover-doodle">✳</span><span class="cover-subject">{{ purchase.material.subject }}</span><span class="cover-note">made<br>simple</span></div>
+            {% endif %}
+            <span class="owned-pill">✓ In your library</span>
+          </a>
+          <div class="material-info">
+            <div class="card-meta"><span>{{ purchase.material.subject }}</span><span class="meta-dot">·</span><span>{{ purchase.material.class_level }}</span></div>
+            <h3><a href="{% url 'public:detail' purchase.material.id %}">{{ purchase.material.title }}</a></h3>
+            <p class="card-description">{{ purchase.material.description|truncatewords:18 }}</p>
+            <div class="card-bottom"><span class="library-date">Added {{ purchase.purchased_at|date:"M j, Y" }}</span><a class="card-link" href="{% url 'public:detail' purchase.material.id %}">Open notes <span aria-hidden="true">↗</span></a></div>
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <span class="empty-icon">♡</span>
+      <h2>Your shelf is still a blank page.</h2>
+      <p>Find a set of notes you love and it’ll be waiting here for you.</p>
+      <a class="button button-primary" href="{% url 'public:catalog' %}">Explore class notes <span aria-hidden="true">→</span></a>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

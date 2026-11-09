@@ -1,0 +1,25 @@
+{% extends "public/base.html" %}
+
+{% block title %}Join StudyNest — free student account{% endblock %}
+
+{% block content %}
+<section class="auth-page">
+  <div class="auth-card">
+    <span class="eyebrow eyebrow-dark">YOUR STUDY CORNER</span>
+    <h1>A fresh start, for free.</h1>
+    <p>Create an account to save notes and build your own library.</p>
+    <form method="post" class="auth-form">
+      {% csrf_token %}
+      {% for field in form %}
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% if field.help_text %}<div class="field-help">{{ field.help_text|safe }}</div>{% endif %}
+        {% if field.errors %}<div class="field-error">{{ field.errors }}</div>{% endif %}
+      {% endfor %}
+      <button class="button button-primary auth-submit" type="submit">Create my account <span aria-hidden="true">→</span></button>
+    </form>
+    <p class="auth-switch">Already have an account? <a href="{% url 'public:login' %}">Log in</a></p>
+  </div>
+  <div class="auth-art"><span>✦</span><strong>Your goals.<br>Your pace.<br>Your place.</strong><i>— welcome to StudyNest</i></div>
+</section>
+{% endblock %}

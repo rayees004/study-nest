@@ -1,0 +1,54 @@
+{% extends "public/base.html" %}
+
+{% block title %}{{ material.title }} — StudyNest{% endblock %}
+
+{% block content %}
+<section class="detail-wrap">
+  <a class="back-link" href="{% url 'public:catalog' %}">← Back to notes</a>
+  <div class="detail-card">
+    <div class="detail-cover">
+      {% if material.cover_image %}
+        <img src="{{ material.cover_image }}" alt="{{ material.subject }} class notes cover">
+      {% else %}
+        <div class="cover-placeholder cover-large"><span class="cover-doodle">✳</span><span class="cover-subject">{{ material.subject }}</span><span class="cover-note">made<br>simple</span></div>
+      {% endif %}
+    </div>
+    <div class="detail-copy">
+      <div class="card-meta"><span>{{ material.subject }}</span><span class="meta-dot">·</span><span>{{ material.class_level }}</span></div>
+      <h1>{{ material.title }}</h1>
+      <p class="detail-description">{{ material.description }}</p>
+      <div class="detail-facts"><span>✦ <strong>{{ material.class_level }}</strong></span><span>✎ <strong>{{ material.subject }}</strong></span><span>♡ <strong>Learn at your pace</strong></span></div>
+      {% if purchased %}
+        <div class="owned-message">✓ This note set is in your library.</div>
+        {% if material.notes_file %}
+          <a class="button button-primary" href="{% url 'public:download' material.id %}">Download class notes <span aria-hidden="true">↓</span></a>
+        {% endif %}
+      {% elif user.is_authenticated %}
+        <div class="purchase-row">
+          <div><span class="price-label">One-time price</span><strong class="detail-price">₹{{ material.price|floatformat:0 }}</strong></div>
+          <form method="post" action="{% url 'public:purchase' material.id %}">
+            {% csrf_token %}
+            <button class="button button-primary" type="submit">Add to my library <span aria-hidden="true">→</span></button>
+          </form>
+        </div>
+        <p class="demo-note">Demo checkout — no payment is collected.</p>
+      {% else %}
+        <div class="purchase-row">
+          <div><span class="price-label">One-time price</span><strong class="detail-price">₹{{ material.price|floatformat:0 }}</strong></div>
+          <a class="button button-primary" href="{% url 'public:login' %}?next={% url 'public:detail' material.id %}">Log in to get notes <span aria-hidden="true">→</span></a>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+  {% if purchased %}
+    {% if material.notes_content %}
+      <article class="notes-content">
+        <div class="notes-heading"><div><span class="eyebrow eyebrow-dark">YOUR CLASS NOTES</span><h2>Let’s get into it.</h2></div><span class="note-check">✓ Yours to study</span></div>
+        <div class="notes-body">{{ material.notes_content|linebreaks }}</div>
+      </article>
+    {% elif not material.notes_file %}
+      <div class="notice notice-info notes-unavailable">Notes content hasn't been added to this listing yet. Please check back soon.</div>
+    {% endif %}
+  {% endif %}
+</section>
+{% endblock %}

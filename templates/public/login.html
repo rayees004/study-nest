@@ -1,0 +1,27 @@
+{% extends "public/base.html" %}
+
+{% block title %}Log in — StudyNest{% endblock %}
+
+{% block content %}
+<section class="auth-page">
+  <div class="auth-card">
+    <span class="eyebrow eyebrow-dark">WELCOME BACK</span>
+    <h1>Your notes missed you.</h1>
+    <p>Log in to pick up right where you left off.</p>
+    <form method="post" class="auth-form">
+      {% csrf_token %}
+      {% if form.non_field_errors %}<div class="form-errors">{{ form.non_field_errors }}</div>{% endif %}
+      <label for="{{ form.username.id_for_label }}">Username</label>
+      {{ form.username }}
+      {% if form.username.errors %}<div class="field-error">{{ form.username.errors }}</div>{% endif %}
+      <label for="{{ form.password.id_for_label }}">Password</label>
+      {{ form.password }}
+      {% if form.password.errors %}<div class="field-error">{{ form.password.errors }}</div>{% endif %}
+      {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+      <button class="button button-primary auth-submit" type="submit">Log in <span aria-hidden="true">→</span></button>
+    </form>
+    <p class="auth-switch">New around here? <a href="{% url 'public:register' %}">Create a free account</a></p>
+  </div>
+  <div class="auth-art"><span>✎</span><strong>Small steps<br>still move you<br>forward.</strong><i>— your StudyNest reminder</i></div>
+</section>
+{% endblock %}

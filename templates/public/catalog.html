@@ -1,0 +1,116 @@
+{% extends "public/base.html" %}
+
+{% block title %}Explore class notes — StudyNest{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <div class="hero-inner">
+    <div class="hero-copy">
+      <span class="eyebrow"><span class="eyebrow-dot"></span> A little more clarity, every day</span>
+      <h1>Your next <span>“aha!”</span><br>starts right here.</h1>
+      <p>Find clear, student-friendly class notes made to help you understand more and stress less.</p>
+      <a class="button button-light" href="#notes">Find your notes <span aria-hidden="true">↓</span></a>
+      <div class="hero-proof"><span class="avatar-stack"><i>✦</i><i>✎</i><i>✓</i></span><span>Small notes. Big progress.</span></div>
+    </div>
+    <div class="hero-art" aria-hidden="true">
+      <div class="hero-orbit orbit-one"></div><div class="hero-orbit orbit-two"></div>
+      <div class="hero-note note-back"><span class="mini-line"></span><span class="mini-line short"></span><span class="mini-highlight"></span><span class="mini-line"></span></div>
+      <div class="hero-note note-front"><span class="note-label">TODAY'S REMINDER</span><strong>One page<br>at a time.</strong><span class="note-scribble">you've got this ↗</span></div>
+      <span class="floating-star star-one">✳</span><span class="floating-star star-two">✦</span>
+    </div>
+  </div>
+</section>
+
+<section class="catalog-section" id="notes">
+  <div class="section-heading">
+    <div>
+      <span class="eyebrow eyebrow-dark">THE NOTE SHELF</span>
+      <h2>{% if collection == "purchased" %}Your study library{% else %}Find your next study boost{% endif %}</h2>
+      <p>Browse by subject or class. Your next favourite notes are a few clicks away.</p>
+    </div>
+    {% if user.is_authenticated %}
+      <div class="collection-switch" aria-label="Note collection">
+        <a class="{% if collection == 'available' %}active{% endif %}" href="{% url 'public:catalog' %}?collection=available">Explore</a>
+        <a class="{% if collection == 'purchased' %}active{% endif %}" href="{% url 'public:catalog' %}?collection=purchased">My notes</a>
+      </div>
+    {% endif %}
+  </div>
+
+  <form class="filter-bar" method="get" action="{% url 'public:catalog' %}" id="filter-form">
+    <input type="hidden" name="collection" value="{{ collection }}">
+    <label class="search-control">
+      <span aria-hidden="true">⌕</span>
+      <input type="search" name="q" value="{{ query }}" placeholder="Search notes or subjects" aria-label="Search notes or subjects">
+    </label>
+    <label class="select-control">
+      <span class="sr-only">Subject</span>
+      <select name="subject">
+        <option value="">All subjects</option>
+        {% for item in subjects %}
+          <option value="{{ item }}" {% if selected_subject == item %}selected{% endif %}>{{ item }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label class="select-control">
+      <span class="sr-only">Class</span>
+      <select name="class_level">
+        <option value="">All classes</option>
+        {% for value, label in class_levels %}
+          <option value="{{ value }}" {% if selected_class == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <button class="button button-dark filter-submit" type="submit">Find notes <span aria-hidden="true">→</span></button>
+  </form>
+
+  {% if materials %}
+    <div class="material-grid">
+      {% for material in materials %}
+        <article class="material-card">
+          <a class="cover-link" href="{% url 'public:detail' material.id %}" aria-label="View {{ material.title }}">
+            {% if material.cover_image %}
+              <img class="material-cover" src="{{ material.cover_image }}" alt="{{ material.subject }} class notes cover" loading="lazy">
+            {% else %}
+              <div class="material-cover cover-placeholder cover-{{ forloop.counter|divisibleby:4|yesno:'four,one' }}">
+                <span class="cover-doodle">✳</span><span class="cover-subject">{{ material.subject }}</span><span class="cover-note">made<br>simple</span>
+              </div>
+            {% endif %}
+            <span class="level-pill">{{ material.class_level }}</span>
+            {% if material.id in purchased_ids %}<span class="owned-pill">In your library</span>{% endif %}
+          </a>
+          <div class="material-info">
+            <div class="card-meta"><span>{{ material.subject }}</span><span class="meta-dot">·</span><span>{{ material.class_level }}</span></div>
+            <h3><a href="{% url 'public:detail' material.id %}">{{ material.title }}</a></h3>
+            <p class="card-description">{{ material.description|truncatewords:18 }}</p>
+            <div class="card-bottom">
+              <strong class="price">₹{{ material.price|floatformat:0 }}</strong>
+              <a class="card-link" href="{% url 'public:detail' material.id %}">{% if material.id in purchased_ids %}Open notes{% else %}View notes{% endif %}<span aria-hidden="true">↗</span></a>
+            </div>
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <span class="empty-icon">✎</span>
+      <h3>{% if collection == "purchased" %}Your library is ready when you are{% else %}No notes match just yet{% endif %}</h3>
+      <p>{% if collection == "purchased" %}Explore the shelf and add your first set of notes.{% else %}Try a different search, subject or class level.{% endif %}</p>
+      {% if collection == "purchased" %}
+        <a class="button button-primary" href="{% url 'public:catalog' %}">Explore notes <span aria-hidden="true">→</span></a>
+      {% else %}
+        <a class="text-link" href="{% url 'public:catalog' %}">Clear filters <span aria-hidden="true">↗</span></a>
+      {% endif %}
+    </div>
+  {% endif %}
+</section>
+
+<section class="bottom-cta">
+  <span class="cta-spark">✳</span>
+  <div><span class="eyebrow eyebrow-dark">YOUR NEXT CHAPTER</span><h2>Make room for a little progress.</h2><p>Keep all your purchased notes together in one happy place.</p></div>
+  {% if user.is_authenticated %}
+    <a class="button button-dark" href="{% url 'public:library' %}">Go to my library <span aria-hidden="true">↗</span></a>
+  {% else %}
+    <a class="button button-dark" href="{% url 'public:register' %}">Create a free account <span aria-hidden="true">↗</span></a>
+  {% endif %}
+</section>
+{% endblock %}
