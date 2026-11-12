@@ -21,7 +21,7 @@ urlpatterns = [
     ),
     path(
         "accounts/login/",
-        auth_views.LoginView.as_view(
+        views.StudyNestLoginView.as_view(
             template_name="public/login.html",
             redirect_authenticated_user=True,
         ),

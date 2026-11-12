@@ -1,15 +1,54 @@
 from pathlib import Path
 
+from django import forms
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.views import LoginView
 from django.db.models import Q
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views.decorators.http import require_POST
 
-from material_provider.models import Purchase, StudyMaterial
+from material_provider.models import (
+    MaterialProviderProfile,
+    Purchase,
+    StudyMaterial,
+)
+
+
+class StudyNestUserCreationForm(UserCreationForm):
+    user_type = forms.ChoiceField(
+        label="I want to join as",
+        choices=MaterialProviderProfile.USER_TYPES,
+        initial="student",
+        required=False,
+    )
+
+    class Meta(UserCreationForm.Meta):
+        fields = ("username",)
+
+    def save(self, commit=True):
+        user = super().save(commit=commit)
+        if commit:
+            MaterialProviderProfile.objects.create(
+                user=user,
+                user_type=self.cleaned_data.get("user_type") or "student",
+            )
+        return user
+
+
+class StudyNestLoginView(LoginView):
+    def get_success_url(self):
+        redirect_to = self.get_redirect_url()
+        if redirect_to:
+            return redirect_to
+        profile = getattr(self.request.user, "provider_profile", None)
+        if profile and profile.user_type == "material_provider":
+            return reverse("material_provider:dashboard")
+        return reverse("public:catalog")
 
 
 def material_catalog(request):
@@ -128,12 +167,19 @@ def download_material(request, material_id):
 
 def register_student(request):
     if request.user.is_authenticated:
+        if getattr(request.user, "provider_profile", None) and (
+            request.user.provider_profile.user_type == "material_provider"
+        ):
+            return redirect("material_provider:dashboard")
         return redirect("public:catalog")
 
-    form = UserCreationForm(request.POST or None)
+    form = StudyNestUserCreationForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
-        student = form.save()
-        login(request, student)
+        user = form.save()
+        login(request, user)
+        if form.cleaned_data.get("user_type") == "material_provider":
+            messages.success(request, "Your material provider account is ready.")
+            return redirect("material_provider:dashboard")
         messages.success(request, "Your student account is ready.")
         return redirect("public:catalog")
     return render(request, "public/register.html", {"form": form})

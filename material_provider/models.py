@@ -2,6 +2,27 @@ from django.conf import settings
 from django.db import models
 
 
+class MaterialProviderProfile(models.Model):
+    USER_TYPES = [
+        ("student", "Student"),
+        ("material_provider", "Material Provider"),
+    ]
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="provider_profile",
+    )
+    user_type = models.CharField(
+        max_length=24,
+        choices=USER_TYPES,
+        default="student",
+    )
+
+    def __str__(self):
+        return f"{self.user} · {self.get_user_type_display()}"
+
+
 class StudyMaterial(models.Model):
     CLASS_LEVELS = [
         ("Class 6", "Class 6"),
@@ -23,6 +44,13 @@ class StudyMaterial(models.Model):
     notes_file = models.FileField(upload_to="study_notes/", blank=True)
     is_published = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    provider = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name="provided_study_materials",
+    )
 
     class Meta:
         ordering = ["subject", "class_level", "title"]

@@ -1,0 +1,143 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#eef9f0">
+  <title>Provider dashboard — StudyNest</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/site.css' %}">
+</head>
+<body class="provider-body">
+  <div class="provider-layout">
+    <aside class="provider-sidebar">
+      <a class="provider-brand" href="{% url 'material_provider:dashboard' %}">
+        <span class="provider-brand-mark" aria-hidden="true">✦</span>
+        <span><strong>Study Nest</strong><small>Material Provider</small></span>
+      </a>
+      <nav class="provider-nav" aria-label="Provider dashboard">
+        <a class="active" href="{% url 'material_provider:dashboard' %}"><span>⌂</span>Dashboard</a>
+        <a href="{% url 'material_provider:add_material' %}"><span>▤</span>Study Material <b>›</b></a>
+        <a href="#payments"><span>▣</span>Payments</a>
+        <a href="#sales"><span>▥</span>Reports</a>
+        <a href="#students"><span>♧</span>Students</a>
+        <a href="#orders"><span>🛒</span>Orders</a>
+      </nav>
+      <div class="provider-sidebar-bottom">
+        <div class="provider-sidebar-art" aria-hidden="true"><span>📚</span><i>✦</i></div>
+        <p>Empowering education<br>with quality materials</p>
+        <form method="post" action="{% url 'public:logout' %}">
+          {% csrf_token %}
+          <button type="submit"><span>⇥</span>Logout</button>
+        </form>
+      </div>
+    </aside>
+
+    <main class="provider-main">
+      <header class="provider-topbar">
+        <form class="provider-search" method="get" action="{% url 'material_provider:dashboard' %}">
+          <span aria-hidden="true">⌕</span>
+          <label class="sr-only" for="dashboard-search">Search your materials</label>
+          <input id="dashboard-search" type="search" name="q" value="{{ search_query }}" placeholder="Search here...">
+        </form>
+        <div class="provider-user">
+          <span class="provider-bell" aria-hidden="true">♧<i></i></span>
+          <span class="provider-avatar" aria-hidden="true">{{ provider_name|first|upper }}</span>
+          <span><strong>{{ provider_name }}</strong><small>Material Provider</small></span>
+        </div>
+      </header>
+
+      {% if messages %}
+        <div class="provider-messages" aria-live="polite">
+          {% for message in messages %}<p class="notice notice-{{ message.tags }}">{{ message }}</p>{% endfor %}
+        </div>
+      {% endif %}
+
+      <section class="provider-welcome">
+        <div>
+          <h1>Welcome back, {{ provider_name }}!</h1>
+          <p>Here's what's happening with your material provider platform today.</p>
+        </div>
+        <span class="provider-date">▦ &nbsp;{{ date_range }} <span aria-hidden="true">›</span></span>
+      </section>
+
+      <section class="provider-stats" aria-label="Provider statistics">
+        <article class="provider-stat"><span class="stat-icon">▤</span><div><p>Total Study Materials</p><strong>{{ materials_count }}</strong><small>Your published and draft materials</small></div></article>
+        <article class="provider-stat"><span class="stat-icon">▣</span><div><p>Total Earnings</p><strong>₹{{ earnings|floatformat:0 }}</strong><small>From completed demo purchases</small></div></article>
+        <article class="provider-stat"><span class="stat-icon">🛒</span><div><p>Total Orders</p><strong>{{ orders_count }}</strong><small>All material purchases</small></div></article>
+        <article class="provider-stat" id="students"><span class="stat-icon">♧</span><div><p>Active Students</p><strong>{{ students_count }}</strong><small>Students who purchased your notes</small></div></article>
+      </section>
+
+      <section class="provider-content-grid">
+        <article class="provider-panel sales-panel" id="sales">
+          <div class="provider-panel-heading">
+            <h2><span>▥</span>Sales Overview</h2>
+            <span class="provider-period">Last 4 weeks</span>
+          </div>
+          <div class="provider-chart">
+            <div class="chart-y-labels"><span>₹{{ chart_max_revenue|floatformat:0 }}</span><span>₹0</span></div>
+            <svg viewBox="0 0 520 170" role="img" aria-label="Weekly sales revenue for the last four weeks">
+              <defs>
+                <linearGradient id="sales-fill" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0%" stop-color="#00b65d" stop-opacity=".2"/>
+                  <stop offset="100%" stop-color="#00b65d" stop-opacity=".01"/>
+                </linearGradient>
+              </defs>
+              <path class="chart-grid-line" d="M25 35H510 M25 82H510 M25 128H510"/>
+              <path d="{{ chart_area_path }}" fill="url(#sales-fill)"/>
+              <path class="chart-line" d="{{ chart_path }}"/>
+              {% for point in sales_weeks %}
+                <circle class="chart-point" cx="{{ point.x }}" cy="{{ point.y }}" r="4"/>
+                <text class="chart-value" x="{{ point.x }}" y="153" text-anchor="middle">{{ point.label }}</text>
+              {% endfor %}
+            </svg>
+          </div>
+        </article>
+
+        <article class="provider-panel activity-panel" id="orders">
+          <div class="provider-panel-heading">
+            <h2><span class="heading-spark">ϟ</span>Recent Activities</h2>
+            <a href="#orders">View all <span aria-hidden="true">→</span></a>
+          </div>
+          {% for purchase in recent_purchases %}
+            <div class="provider-activity">
+              <span class="activity-icon">🛒</span>
+              <div><strong>New order received</strong><small>{{ purchase.material.title }}</small><small>Order #{{ purchase.pk }} · {{ purchase.purchased_at|timesince }} ago</small></div>
+              <b>₹{{ purchase.price_at_purchase|floatformat:0 }}</b>
+            </div>
+          {% empty %}
+            <div class="provider-empty-activity"><span>✦</span><p>Your recent orders will appear here.</p></div>
+          {% endfor %}
+        </article>
+      </section>
+
+      <section class="provider-bottom-grid">
+        <article class="provider-panel top-materials">
+          <div class="provider-panel-heading">
+            <h2><span>🏆</span>Top Selling Materials</h2>
+            <a href="{% url 'material_provider:add_material' %}">Add material <span aria-hidden="true">→</span></a>
+          </div>
+          {% for material in top_materials %}
+            <div class="top-material-row"><span class="top-rank">{{ forloop.counter }}</span><span class="material-mini-icon">▤</span><strong>{{ material.title }}</strong><span class="material-sales-track"><i style="width: {{ material.sales_percent }}%"></i></span><small>{{ material.sales }} sales</small></div>
+          {% empty %}
+            <div class="provider-empty-activity"><span>▤</span><p>{% if search_query %}No materials match “{{ search_query }}”.{% else %}Add your first study material to start selling.{% endif %}</p></div>
+          {% endfor %}
+        </article>
+
+        <article class="provider-panel payment-panel" id="payments">
+          <div class="provider-panel-heading"><h2><span>▣</span>Payment Overview</h2></div>
+          <div class="payment-total"><span class="payment-donut"><span>₹{{ earnings|floatformat:0 }}<small>Total earnings</small></span></span><div><strong>₹{{ earnings|floatformat:0 }}</strong><small>Recorded purchase revenue</small></div></div>
+        </article>
+
+        <article class="provider-cta">
+          <div><h2>Grow Your<br>Teaching Business!</h2><p>Share quality study materials<br>and earn more.</p><a href="{% url 'material_provider:add_material' %}">Add New Material <span aria-hidden="true">→</span></a></div>
+          <span class="cta-books" aria-hidden="true">📚<i>↗</i></span>
+        </article>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

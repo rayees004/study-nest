@@ -1,0 +1,30 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Add study material — StudyNest</title>
+  <link rel="stylesheet" href="{% static 'css/site.css' %}">
+</head>
+<body class="provider-body">
+  <main class="provider-form-page">
+    <a class="provider-back" href="{% url 'material_provider:dashboard' %}">← Back to dashboard</a>
+    <section class="provider-form-card">
+      <span class="eyebrow eyebrow-dark">YOUR MATERIALS</span>
+      <h1>Add new study material</h1>
+      <p>Share your notes with students on StudyNest.</p>
+      <form method="post" enctype="multipart/form-data" class="provider-material-form">
+        {% csrf_token %}
+        {% for field in form %}
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.help_text %}<small class="field-help">{{ field.help_text }}</small>{% endif %}
+          {% if field.errors %}<div class="field-error">{{ field.errors }}</div>{% endif %}
+        {% endfor %}
+        <button class="button button-primary" type="submit">Add material <span aria-hidden="true">→</span></button>
+      </form>
+    </section>
+  </main>
+</body>
+</html>

@@ -5,7 +5,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
 
-from .models import Purchase, StudyMaterial
+from .models import MaterialProviderProfile, Purchase, StudyMaterial
 
 
 class StudentMaterialTests(TestCase):
@@ -130,3 +130,114 @@ class StudentMaterialTests(TestCase):
         self.assertTrue(
             get_user_model().objects.filter(username="newstudent").exists()
         )
+        self.assertEqual(
+            MaterialProviderProfile.objects.get(
+                user__username="newstudent"
+            ).user_type,
+            "student",
+        )
+
+    def test_material_provider_can_register_and_use_the_shared_login(self):
+        registration = self.client.post(
+            reverse("public:register"),
+            {
+                "username": "provider",
+                "password1": "a-very-safe-test-password",
+                "password2": "a-very-safe-test-password",
+                "user_type": "material_provider",
+            },
+        )
+
+        self.assertRedirects(
+            registration,
+            reverse("material_provider:dashboard"),
+        )
+        self.client.post(reverse("public:logout"))
+        login_response = self.client.post(
+            reverse("public:login"),
+            {
+                "username": "provider",
+                "password": "a-very-safe-test-password",
+            },
+        )
+
+        self.assertRedirects(
+            login_response,
+            reverse("material_provider:dashboard"),
+        )
+
+
+class MaterialProviderDashboardTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username="provider",
+            password="a-safe-test-password",
+        )
+        MaterialProviderProfile.objects.create(
+            user=self.user,
+            user_type="material_provider",
+        )
+        self.material = StudyMaterial.objects.create(
+            title="Biology notes",
+            subject="Biology",
+            class_level="Class 9",
+            description="Cell structure notes",
+            price="100.00",
+            provider=self.user,
+        )
+        self.student = get_user_model().objects.create_user(
+            username="buyer",
+            password="a-safe-test-password",
+        )
+        Purchase.objects.create(
+            student=self.student,
+            material=self.material,
+            price_at_purchase="100.00",
+        )
+        self.client.force_login(self.user)
+
+    def test_dashboard_shows_provider_metrics(self):
+        response = self.client.get(reverse("material_provider:dashboard"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["materials_count"], 1)
+        self.assertEqual(response.context["earnings"], 100)
+        self.assertEqual(response.context["orders_count"], 1)
+        self.assertEqual(response.context["students_count"], 1)
+        self.assertContains(response, "Biology notes")
+
+    def test_provider_can_add_material_to_their_account(self):
+        response = self.client.post(
+            reverse("material_provider:add_material"),
+            {
+                "title": "Chemistry guide",
+                "subject": "Chemistry",
+                "class_level": "Class 10",
+                "description": "Reactions and equations",
+                "price": "120.00",
+                "cover_image": "",
+                "notes_content": "Study notes",
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            reverse("material_provider:dashboard"),
+        )
+        material = StudyMaterial.objects.get(title="Chemistry guide")
+        self.assertEqual(material.provider, self.user)
+
+    def test_student_cannot_open_provider_dashboard(self):
+        student = get_user_model().objects.create_user(
+            username="another-student",
+            password="a-safe-test-password",
+        )
+        MaterialProviderProfile.objects.create(
+            user=student,
+            user_type="student",
+        )
+        self.client.force_login(student)
+
+        response = self.client.get(reverse("material_provider:dashboard"))
+
+        self.assertRedirects(response, reverse("public:catalog"))

@@ -1,13 +1,13 @@
 {% extends "public/base.html" %}
 
-{% block title %}Join StudyNest — free student account{% endblock %}
+{% block title %}Join StudyNest{% endblock %}
 
 {% block content %}
 <section class="auth-page">
   <div class="auth-card">
-    <span class="eyebrow eyebrow-dark">YOUR STUDY CORNER</span>
+    <span class="eyebrow eyebrow-dark">JOIN STUDYNEST</span>
     <h1>A fresh start, for free.</h1>
-    <p>Create an account to save notes and build your own library.</p>
+    <p>Create a student account or join as a material provider.</p>
     <form method="post" class="auth-form">
       {% csrf_token %}
       {% for field in form %}
