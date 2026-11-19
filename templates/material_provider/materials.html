@@ -1,0 +1,105 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#eef9f0">
+  <title>Study materials — StudyNest</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/site.css' %}">
+</head>
+<body class="provider-body">
+  <div class="provider-layout">
+    <aside class="provider-sidebar">
+      <a class="provider-brand" href="{% url 'material_provider:dashboard' %}">
+        <span class="provider-brand-mark" aria-hidden="true">✦</span>
+        <span><strong>Study Nest</strong><small>Material Provider</small></span>
+      </a>
+      <nav class="provider-nav" aria-label="Provider dashboard">
+        <a href="{% url 'material_provider:dashboard' %}"><span>⌂</span>Dashboard</a>
+        <a class="active" href="{% url 'material_provider:materials' %}" aria-current="page"><span>▤</span>Study Material <b>›</b></a>
+        <a href="{% url 'material_provider:dashboard' %}#payments"><span>▣</span>Payments</a>
+        <a href="{% url 'material_provider:dashboard' %}#sales"><span>▥</span>Reports</a>
+        <a href="{% url 'material_provider:dashboard' %}#students"><span>♧</span>Students</a>
+        <a href="{% url 'material_provider:dashboard' %}#orders"><span>🛒</span>Orders</a>
+      </nav>
+      <div class="provider-sidebar-bottom">
+        <div class="provider-sidebar-art" aria-hidden="true"><span>📚</span><i>✦</i></div>
+        <p>Empowering education<br>with quality materials</p>
+        <form method="post" action="{% url 'public:logout' %}">
+          {% csrf_token %}
+          <button type="submit"><span>⇥</span>Logout</button>
+        </form>
+      </div>
+    </aside>
+
+    <main class="provider-main">
+      <header class="provider-topbar">
+        <form class="provider-search" method="get" action="{% url 'material_provider:materials' %}">
+          <span aria-hidden="true">⌕</span>
+          <label class="sr-only" for="materials-search">Search your materials</label>
+          <input id="materials-search" type="search" name="q" value="{{ search_query }}" placeholder="Search your materials...">
+        </form>
+        <div class="provider-user">
+          <span class="provider-avatar" aria-hidden="true">{{ provider_name|first|upper }}</span>
+          <span><strong>{{ provider_name }}</strong><small>Material Provider</small></span>
+        </div>
+      </header>
+
+      {% if messages %}
+        <div class="provider-messages" aria-live="polite">
+          {% for message in messages %}<p class="notice notice-{{ message.tags }}">{{ message }}</p>{% endfor %}
+        </div>
+      {% endif %}
+
+      <section class="provider-welcome">
+        <div>
+          <h1>Study Materials</h1>
+          <p>Manage the study materials you have shared with students.</p>
+        </div>
+        <span class="provider-date">▤ &nbsp;{{ materials_count }} materials</span>
+      </section>
+
+      <section class="provider-panel provider-materials-panel">
+        <div class="provider-panel-heading">
+          <h2><span>▤</span>Uploaded Materials</h2>
+          <a class="provider-add-button" href="{% url 'material_provider:add_material' %}">＋ Add material</a>
+        </div>
+        <div class="provider-material-table-wrap">
+          <table class="provider-material-table">
+            <thead>
+              <tr>
+                <th scope="col">Material name</th>
+                <th scope="col">Related category</th>
+                <th scope="col">Class</th>
+                <th scope="col">Price</th>
+                <th scope="col">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for material in provider_materials %}
+                <tr>
+                  <td class="provider-material-name">{{ material.title }}</td>
+                  <td>{{ material.subject }}</td>
+                  <td>{{ material.class_level }}</td>
+                  <td>₹{{ material.price|floatformat:0 }}</td>
+                  <td><span class="provider-material-status">{% if material.is_published %}Published{% else %}Draft{% endif %}</span></td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td class="provider-material-empty" colspan="5">
+                    {% if search_query %}No materials match “{{ search_query }}”.{% else %}You have not uploaded any materials yet. Add your first one to get started.{% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

@@ -206,6 +206,39 @@ class MaterialProviderDashboardTests(TestCase):
         self.assertEqual(response.context["students_count"], 1)
         self.assertContains(response, "Biology notes")
 
+    def test_materials_page_lists_only_provider_materials_with_category(self):
+        another_provider = get_user_model().objects.create_user(
+            username="another-provider",
+            password="a-safe-test-password",
+        )
+        StudyMaterial.objects.create(
+            title="Private notes",
+            subject="History",
+            class_level="Class 8",
+            description="Not this provider's material",
+            price="50.00",
+            provider=another_provider,
+        )
+
+        dashboard = self.client.get(reverse("material_provider:dashboard"))
+        response = self.client.get(reverse("material_provider:materials"))
+
+        self.assertContains(
+            dashboard,
+            reverse("material_provider:materials"),
+        )
+        self.assertContains(response, "Uploaded Materials")
+        self.assertContains(response, "Biology notes")
+        self.assertContains(response, "Biology")
+        self.assertContains(response, "Add material")
+        self.assertNotContains(response, "Private notes")
+
+    def test_add_material_form_uses_material_name_and_category_labels(self):
+        response = self.client.get(reverse("material_provider:add_material"))
+
+        self.assertContains(response, "Material name")
+        self.assertContains(response, "Related category")
+
     def test_provider_can_add_material_to_their_account(self):
         response = self.client.post(
             reverse("material_provider:add_material"),
@@ -222,7 +255,7 @@ class MaterialProviderDashboardTests(TestCase):
 
         self.assertRedirects(
             response,
-            reverse("material_provider:dashboard"),
+            reverse("material_provider:materials"),
         )
         material = StudyMaterial.objects.get(title="Chemistry guide")
         self.assertEqual(material.provider, self.user)

@@ -6,5 +6,6 @@ app_name = "material_provider"
 
 urlpatterns = [
     path("", views.dashboard, name="dashboard"),
+    path("materials/", views.materials, name="materials"),
     path("materials/add/", views.add_material, name="add_material"),
 ]

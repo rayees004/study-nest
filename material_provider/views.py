@@ -26,6 +26,7 @@ class StudyMaterialForm(forms.ModelForm):
             "notes_content",
             "notes_file",
         )
+        labels = {"title": "Material name", "subject": "Related category"}
         widgets = {
             "description": forms.Textarea(attrs={"rows": 3}),
             "notes_content": forms.Textarea(attrs={"rows": 6}),
@@ -139,6 +140,28 @@ def dashboard(request):
 
 
 @material_provider_required
+def materials(request):
+    provider_materials = StudyMaterial.objects.filter(provider=request.user)
+    query = request.GET.get("q", "").strip()
+    if query:
+        provider_materials = provider_materials.filter(
+            Q(title__icontains=query) | Q(subject__icontains=query)
+        )
+    return render(
+        request,
+        "material_provider/materials.html",
+        {
+            "provider_materials": provider_materials.order_by("-created_at"),
+            "materials_count": StudyMaterial.objects.filter(
+                provider=request.user
+            ).count(),
+            "provider_name": request.user.get_full_name() or request.user.username,
+            "search_query": query,
+        },
+    )
+
+
+@material_provider_required
 def add_material(request):
     form = StudyMaterialForm(request.POST or None, request.FILES or None)
     if request.method == "POST" and form.is_valid():
@@ -146,7 +169,7 @@ def add_material(request):
         material.provider = request.user
         material.save()
         messages.success(request, "Your study material has been added.")
-        return redirect("material_provider:dashboard")
+        return redirect("material_provider:materials")
     return render(
         request,
         "material_provider/add_material.html",
