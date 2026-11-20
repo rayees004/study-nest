@@ -1,9 +1,11 @@
 from decimal import Decimal
+from io import BytesIO
 
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
+from PIL import Image
 
 from .models import MaterialProviderProfile, Purchase, StudyMaterial
 
@@ -80,6 +82,19 @@ class StudentMaterialTests(TestCase):
 
         self.client.post(purchase_url)
         self.assertEqual(Purchase.objects.count(), 1)
+
+    def test_offer_price_is_shown_and_saved_when_material_is_purchased(self):
+        self.material.offer_percentage = 20
+        self.material.save(update_fields=["offer_percentage"])
+        self.client.force_login(self.user)
+
+        catalog = self.client.get(reverse("public:catalog"))
+        self.assertContains(catalog, "20% OFF")
+        self.assertContains(catalog, "₹119")
+
+        self.client.post(reverse("public:purchase", args=[self.material.pk]))
+        purchase = Purchase.objects.get(student=self.user, material=self.material)
+        self.assertEqual(purchase.price_at_purchase, Decimal("119.20"))
 
     def test_catalog_separates_purchased_notes_from_available_notes(self):
         Purchase.objects.create(
@@ -231,13 +246,15 @@ class MaterialProviderDashboardTests(TestCase):
         self.assertContains(response, "Biology notes")
         self.assertContains(response, "Biology")
         self.assertContains(response, "Add material")
+        self.assertNotContains(response, "0% OFF")
         self.assertNotContains(response, "Private notes")
 
     def test_add_material_form_uses_material_name_and_category_labels(self):
         response = self.client.get(reverse("material_provider:add_material"))
 
         self.assertContains(response, "Material name")
-        self.assertContains(response, "Related category")
+        self.assertContains(response, "Category")
+        self.assertContains(response, "Add a new category")
 
     def test_provider_can_add_material_to_their_account(self):
         response = self.client.post(
@@ -248,8 +265,10 @@ class MaterialProviderDashboardTests(TestCase):
                 "class_level": "Class 10",
                 "description": "Reactions and equations",
                 "price": "120.00",
-                "cover_image": "",
+                "subject": "__new__",
+                "new_subject": "Chemistry",
                 "notes_content": "Study notes",
+                "offer_percentage": "15",
             },
         )
 
@@ -259,6 +278,151 @@ class MaterialProviderDashboardTests(TestCase):
         )
         material = StudyMaterial.objects.get(title="Chemistry guide")
         self.assertEqual(material.provider, self.user)
+        self.assertEqual(material.subject, "Chemistry")
+        self.assertEqual(material.offer_percentage, 15)
+        self.assertTrue(material.is_published)
+
+    def test_provider_can_upload_cover_and_optional_explanation_video(self):
+        image_data = BytesIO()
+        Image.new("RGB", (2, 2), color="green").save(
+            image_data,
+            format="PNG",
+        )
+        response = self.client.post(
+            reverse("material_provider:add_material"),
+            {
+                "title": "Visual science guide",
+                "subject": "__new__",
+                "new_subject": "Science",
+                "class_level": "Class 8",
+                "description": "An illustrated science guide",
+                "price": "75.00",
+                "offer_percentage": "0",
+                "cover_image_file": SimpleUploadedFile(
+                    "cover.png",
+                    image_data.getvalue(),
+                    content_type="image/png",
+                ),
+                "explanation_video": SimpleUploadedFile(
+                    "explanation.mp4",
+                    b"video content",
+                    content_type="video/mp4",
+                ),
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            reverse("material_provider:materials"),
+        )
+        material = StudyMaterial.objects.get(title="Visual science guide")
+        try:
+            self.assertTrue(material.cover_image_file.name.endswith("cover.png"))
+            self.assertTrue(
+                material.explanation_video.name.endswith("explanation.mp4")
+            )
+            provider_page = self.client.get(
+                reverse("material_provider:materials")
+            )
+            self.assertContains(provider_page, material.cover_image_file.url)
+            catalog_page = self.client.get(reverse("public:catalog"))
+            self.assertContains(catalog_page, material.cover_image_file.url)
+            detail_page = self.client.get(
+                reverse("public:detail", args=[material.pk])
+            )
+            self.assertContains(detail_page, material.cover_image_file.url)
+            self.assertNotContains(detail_page, "cover-placeholder")
+        finally:
+            material.cover_image_file.delete(save=False)
+            material.explanation_video.delete(save=False)
+
+    def test_provider_can_edit_material_and_publish_status(self):
+        edit_response = self.client.post(
+            reverse("material_provider:edit_material", args=[self.material.pk]),
+            {
+                "title": "Updated biology notes",
+                "subject": "Biology",
+                "class_level": "Class 9",
+                "description": "Updated description",
+                "price": "120.00",
+                "notes_content": "Updated notes",
+                "offer_percentage": "10",
+            },
+        )
+
+        self.assertRedirects(
+            edit_response,
+            reverse("material_provider:materials"),
+        )
+        self.material.refresh_from_db()
+        self.assertEqual(self.material.title, "Updated biology notes")
+        self.assertEqual(self.material.offer_percentage, 10)
+
+        toggle_url = reverse(
+            "material_provider:toggle_material_published",
+            args=[self.material.pk],
+        )
+        self.client.post(toggle_url)
+        self.material.refresh_from_db()
+        self.assertFalse(self.material.is_published)
+        self.client.post(toggle_url)
+        self.material.refresh_from_db()
+        self.assertTrue(self.material.is_published)
+
+    def test_material_list_filters_by_category_and_status(self):
+        unpublished = StudyMaterial.objects.create(
+            title="Unpublished biology",
+            subject="Biology",
+            class_level="Class 8",
+            description="Not visible in the published filter",
+            price="50.00",
+            provider=self.user,
+            is_published=False,
+        )
+        StudyMaterial.objects.create(
+            title="History notes",
+            subject="History",
+            class_level="Class 8",
+            description="Another subject",
+            price="50.00",
+            provider=self.user,
+        )
+
+        response = self.client.get(
+            reverse("material_provider:materials"),
+            {"category": "Biology", "status": "published"},
+        )
+
+        self.assertContains(response, self.material.title)
+        self.assertNotContains(response, unpublished.title)
+        self.assertNotContains(response, "History notes")
+
+    def test_provider_cannot_edit_or_toggle_another_providers_material(self):
+        another_provider = get_user_model().objects.create_user(
+            username="another-material-provider",
+            password="a-safe-test-password",
+        )
+        other_material = StudyMaterial.objects.create(
+            title="Other provider material",
+            subject="Science",
+            class_level="Class 8",
+            description="Owned by another provider",
+            price="50.00",
+            provider=another_provider,
+        )
+
+        edit_response = self.client.get(
+            reverse("material_provider:edit_material", args=[other_material.pk])
+        )
+        toggle_response = self.client.post(
+            reverse(
+                "material_provider:toggle_material_published",
+                args=[other_material.pk],
+            )
+        )
+
+        self.assertEqual(edit_response.status_code, 404)
+        self.assertEqual(toggle_response.status_code, 404)
 
     def test_student_cannot_open_provider_dashboard(self):
         student = get_user_model().objects.create_user(

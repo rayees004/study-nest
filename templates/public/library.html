@@ -13,11 +13,14 @@
       {% for purchase in purchases %}
         <article class="material-card">
           <a class="cover-link" href="{% url 'public:detail' purchase.material.id %}">
-            {% if purchase.material.cover_image %}
+            {% if purchase.material.cover_image_file %}
+              <img class="material-cover" src="{{ purchase.material.cover_image_file.url }}" alt="{{ purchase.material.subject }} class notes cover" loading="lazy">
+            {% elif purchase.material.cover_image %}
               <img class="material-cover" src="{{ purchase.material.cover_image }}" alt="{{ purchase.material.subject }} class notes cover" loading="lazy">
             {% else %}
               <div class="material-cover cover-placeholder cover-{{ forloop.counter|divisibleby:4|yesno:'four,one' }}"><span class="cover-doodle">✳</span><span class="cover-subject">{{ purchase.material.subject }}</span><span class="cover-note">made<br>simple</span></div>
             {% endif %}
+            {% if purchase.material.offer_percentage %}<span class="offer-pill">{{ purchase.material.offer_percentage }}% OFF</span>{% endif %}
             <span class="owned-pill">✓ In your library</span>
           </a>
           <div class="material-info">

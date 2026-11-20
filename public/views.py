@@ -127,7 +127,7 @@ def purchase_material(request, material_id):
     _, created = Purchase.objects.get_or_create(
         student=request.user,
         material=material,
-        defaults={"price_at_purchase": material.price},
+        defaults={"price_at_purchase": material.sale_price},
     )
     if created:
         messages.success(

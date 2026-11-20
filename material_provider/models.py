@@ -1,4 +1,7 @@
+from decimal import Decimal
+
 from django.conf import settings
+from django.core.validators import MaxValueValidator
 from django.db import models
 
 
@@ -40,8 +43,20 @@ class StudyMaterial(models.Model):
     description = models.TextField()
     price = models.DecimalField(max_digits=8, decimal_places=2)
     cover_image = models.URLField(blank=True)
+    cover_image_file = models.ImageField(
+        upload_to="study_material_covers/",
+        blank=True,
+    )
     notes_content = models.TextField(blank=True)
     notes_file = models.FileField(upload_to="study_notes/", blank=True)
+    explanation_video = models.FileField(
+        upload_to="study_material_videos/",
+        blank=True,
+    )
+    offer_percentage = models.PositiveSmallIntegerField(
+        default=0,
+        validators=[MaxValueValidator(100)],
+    )
     is_published = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     provider = models.ForeignKey(
@@ -57,6 +72,12 @@ class StudyMaterial(models.Model):
 
     def __str__(self):
         return f"{self.title} · {self.class_level}"
+
+    @property
+    def sale_price(self):
+        return (self.price * (100 - self.offer_percentage) / 100).quantize(
+            Decimal("0.01")
+        )
 
 
 class Purchase(models.Model):

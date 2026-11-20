@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Add study material — StudyNest</title>
+  <title>{% if is_edit %}Edit{% else %}Add{% endif %} study material — StudyNest</title>
   <link rel="stylesheet" href="{% static 'css/site.css' %}">
 </head>
 <body class="provider-body">
@@ -12,19 +12,35 @@
     <a class="provider-back" href="{% url 'material_provider:materials' %}">← Back to materials</a>
     <section class="provider-form-card">
       <span class="eyebrow eyebrow-dark">YOUR MATERIALS</span>
-      <h1>Add new study material</h1>
+      <h1>{% if is_edit %}Edit study material{% else %}Add new study material{% endif %}</h1>
       <p>Share your notes with students on StudyNest.</p>
       <form method="post" enctype="multipart/form-data" class="provider-material-form">
         {% csrf_token %}
         {% for field in form %}
+          {% if field.name != "new_subject" %}
           <label for="{{ field.id_for_label }}">{{ field.label }}</label>
           {{ field }}
           {% if field.help_text %}<small class="field-help">{{ field.help_text }}</small>{% endif %}
           {% if field.errors %}<div class="field-error">{{ field.errors }}</div>{% endif %}
+          {% if field.name == "subject" %}
+            <div class="new-category-field" id="new-category-field" {% if form.subject.value != "__new__" %}hidden{% endif %}>
+              <label for="{{ form.new_subject.id_for_label }}">{{ form.new_subject.label }}</label>
+              {{ form.new_subject }}
+              {% if form.new_subject.errors %}<div class="field-error">{{ form.new_subject.errors }}</div>{% endif %}
+            </div>
+          {% endif %}
+          {% endif %}
         {% endfor %}
-        <button class="button button-primary" type="submit">Add material <span aria-hidden="true">→</span></button>
+        <button class="button button-primary" type="submit">{% if is_edit %}Save changes{% else %}Add material{% endif %} <span aria-hidden="true">→</span></button>
       </form>
     </section>
   </main>
+  <script>
+    const categorySelect = document.getElementById("id_subject");
+    const newCategoryField = document.getElementById("new-category-field");
+    categorySelect.addEventListener("change", function () {
+      newCategoryField.hidden = this.value !== "__new__";
+    });
+  </script>
 </body>
 </html>

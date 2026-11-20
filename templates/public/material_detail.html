@@ -7,7 +7,9 @@
   <a class="back-link" href="{% url 'public:catalog' %}">← Back to notes</a>
   <div class="detail-card">
     <div class="detail-cover">
-      {% if material.cover_image %}
+      {% if material.cover_image_file %}
+        <img src="{{ material.cover_image_file.url }}" alt="{{ material.subject }} class notes cover">
+      {% elif material.cover_image %}
         <img src="{{ material.cover_image }}" alt="{{ material.subject }} class notes cover">
       {% else %}
         <div class="cover-placeholder cover-large"><span class="cover-doodle">✳</span><span class="cover-subject">{{ material.subject }}</span><span class="cover-note">made<br>simple</span></div>
@@ -17,6 +19,12 @@
       <div class="card-meta"><span>{{ material.subject }}</span><span class="meta-dot">·</span><span>{{ material.class_level }}</span></div>
       <h1>{{ material.title }}</h1>
       <p class="detail-description">{{ material.description }}</p>
+      {% if material.explanation_video %}
+        <video class="material-explanation-video" controls preload="metadata">
+          <source src="{{ material.explanation_video.url }}">
+          Your browser does not support video playback.
+        </video>
+      {% endif %}
       <div class="detail-facts"><span>✦ <strong>{{ material.class_level }}</strong></span><span>✎ <strong>{{ material.subject }}</strong></span><span>♡ <strong>Learn at your pace</strong></span></div>
       {% if purchased %}
         <div class="owned-message">✓ This note set is in your library.</div>
@@ -25,7 +33,7 @@
         {% endif %}
       {% elif user.is_authenticated %}
         <div class="purchase-row">
-          <div><span class="price-label">One-time price</span><strong class="detail-price">₹{{ material.price|floatformat:0 }}</strong></div>
+          <div><span class="price-label">One-time price</span><strong class="detail-price">{% if material.offer_percentage %}<del>₹{{ material.price|floatformat:0 }}</del> {% endif %}₹{{ material.sale_price|floatformat:0 }}</strong>{% if material.offer_percentage %}<span class="offer-pill detail-offer">{{ material.offer_percentage }}% OFF</span>{% endif %}</div>
           <form method="post" action="{% url 'public:purchase' material.id %}">
             {% csrf_token %}
             <button class="button button-primary" type="submit">Add to my library <span aria-hidden="true">→</span></button>
@@ -34,7 +42,7 @@
         <p class="demo-note">Demo checkout — no payment is collected.</p>
       {% else %}
         <div class="purchase-row">
-          <div><span class="price-label">One-time price</span><strong class="detail-price">₹{{ material.price|floatformat:0 }}</strong></div>
+          <div><span class="price-label">One-time price</span><strong class="detail-price">{% if material.offer_percentage %}<del>₹{{ material.price|floatformat:0 }}</del> {% endif %}₹{{ material.sale_price|floatformat:0 }}</strong>{% if material.offer_percentage %}<span class="offer-pill detail-offer">{{ material.offer_percentage }}% OFF</span>{% endif %}</div>
           <a class="button button-primary" href="{% url 'public:login' %}?next={% url 'public:detail' material.id %}">Log in to get notes <span aria-hidden="true">→</span></a>
         </div>
       {% endif %}

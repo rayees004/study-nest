@@ -5,7 +5,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#eef9f0">
-  <title>Study materials — StudyNest</title>
+  <title>Study materials - StudyNest</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
@@ -15,23 +15,23 @@
   <div class="provider-layout">
     <aside class="provider-sidebar">
       <a class="provider-brand" href="{% url 'material_provider:dashboard' %}">
-        <span class="provider-brand-mark" aria-hidden="true">✦</span>
+        <span class="provider-brand-mark" aria-hidden="true">*</span>
         <span><strong>Study Nest</strong><small>Material Provider</small></span>
       </a>
       <nav class="provider-nav" aria-label="Provider dashboard">
-        <a href="{% url 'material_provider:dashboard' %}"><span>⌂</span>Dashboard</a>
-        <a class="active" href="{% url 'material_provider:materials' %}" aria-current="page"><span>▤</span>Study Material <b>›</b></a>
-        <a href="{% url 'material_provider:dashboard' %}#payments"><span>▣</span>Payments</a>
-        <a href="{% url 'material_provider:dashboard' %}#sales"><span>▥</span>Reports</a>
-        <a href="{% url 'material_provider:dashboard' %}#students"><span>♧</span>Students</a>
-        <a href="{% url 'material_provider:dashboard' %}#orders"><span>🛒</span>Orders</a>
+        <a href="{% url 'material_provider:dashboard' %}"><span>H</span>Dashboard</a>
+        <a class="active" href="{% url 'material_provider:materials' %}" aria-current="page"><span>M</span>Study Material <b>&gt;</b></a>
+        <a href="{% url 'material_provider:dashboard' %}#payments"><span>P</span>Payments</a>
+        <a href="{% url 'material_provider:dashboard' %}#sales"><span>R</span>Reports</a>
+        <a href="{% url 'material_provider:dashboard' %}#students"><span>S</span>Students</a>
+        <a href="{% url 'material_provider:dashboard' %}#orders"><span>O</span>Orders</a>
       </nav>
       <div class="provider-sidebar-bottom">
-        <div class="provider-sidebar-art" aria-hidden="true"><span>📚</span><i>✦</i></div>
+        <div class="provider-sidebar-art" aria-hidden="true"><span>Books</span><i>*</i></div>
         <p>Empowering education<br>with quality materials</p>
         <form method="post" action="{% url 'public:logout' %}">
           {% csrf_token %}
-          <button type="submit"><span>⇥</span>Logout</button>
+          <button type="submit"><span>&gt;</span>Logout</button>
         </form>
       </div>
     </aside>
@@ -39,9 +39,11 @@
     <main class="provider-main">
       <header class="provider-topbar">
         <form class="provider-search" method="get" action="{% url 'material_provider:materials' %}">
-          <span aria-hidden="true">⌕</span>
+          <span aria-hidden="true">?</span>
           <label class="sr-only" for="materials-search">Search your materials</label>
           <input id="materials-search" type="search" name="q" value="{{ search_query }}" placeholder="Search your materials...">
+          <input type="hidden" name="category" value="{{ selected_category }}">
+          <input type="hidden" name="status" value="{{ selected_status }}">
         </form>
         <div class="provider-user">
           <span class="provider-avatar" aria-hidden="true">{{ provider_name|first|upper }}</span>
@@ -60,44 +62,77 @@
           <h1>Study Materials</h1>
           <p>Manage the study materials you have shared with students.</p>
         </div>
-        <span class="provider-date">▤ &nbsp;{{ materials_count }} materials</span>
+        <span class="provider-date">{{ materials_count }} materials</span>
       </section>
 
       <section class="provider-panel provider-materials-panel">
         <div class="provider-panel-heading">
-          <h2><span>▤</span>Uploaded Materials</h2>
-          <a class="provider-add-button" href="{% url 'material_provider:add_material' %}">＋ Add material</a>
+          <h2><span>M</span>Uploaded Materials</h2>
+          <a class="provider-add-button" href="{% url 'material_provider:add_material' %}">+ Add material</a>
         </div>
-        <div class="provider-material-table-wrap">
-          <table class="provider-material-table">
-            <thead>
-              <tr>
-                <th scope="col">Material name</th>
-                <th scope="col">Related category</th>
-                <th scope="col">Class</th>
-                <th scope="col">Price</th>
-                <th scope="col">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for material in provider_materials %}
-                <tr>
-                  <td class="provider-material-name">{{ material.title }}</td>
-                  <td>{{ material.subject }}</td>
-                  <td>{{ material.class_level }}</td>
-                  <td>₹{{ material.price|floatformat:0 }}</td>
-                  <td><span class="provider-material-status">{% if material.is_published %}Published{% else %}Draft{% endif %}</span></td>
-                </tr>
-              {% empty %}
-                <tr>
-                  <td class="provider-material-empty" colspan="5">
-                    {% if search_query %}No materials match “{{ search_query }}”.{% else %}You have not uploaded any materials yet. Add your first one to get started.{% endif %}
-                  </td>
-                </tr>
+        <form class="provider-material-filters" method="get" action="{% url 'material_provider:materials' %}">
+          <input type="hidden" name="q" value="{{ search_query }}">
+          <label>
+            <span class="sr-only">Filter by category</span>
+            <select name="category" aria-label="Filter by category">
+              <option value="">All categories</option>
+              {% for item in categories %}
+                <option value="{{ item }}" {% if selected_category == item %}selected{% endif %}>{{ item }}</option>
               {% endfor %}
-            </tbody>
-          </table>
-        </div>
+            </select>
+          </label>
+          <label>
+            <span class="sr-only">Filter by publish status</span>
+            <select name="status" aria-label="Filter by publish status">
+              <option value="">All statuses</option>
+              <option value="published" {% if selected_status == "published" %}selected{% endif %}>Published</option>
+              <option value="unpublished" {% if selected_status == "unpublished" %}selected{% endif %}>Unpublished</option>
+            </select>
+          </label>
+          <button type="submit">Filter materials</button>
+          {% if search_query or selected_category or selected_status %}
+            <a href="{% url 'material_provider:materials' %}">Clear filters</a>
+          {% endif %}
+        </form>
+        {% if provider_materials %}
+          <div class="provider-material-grid">
+            {% for material in provider_materials %}
+              <article class="provider-material-card">
+                <div class="provider-material-cover">
+                  {% if material.cover_image_file %}
+                    <img src="{{ material.cover_image_file.url }}" alt="{{ material.title }} cover">
+                  {% elif material.cover_image %}
+                    <img src="{{ material.cover_image }}" alt="{{ material.title }} cover">
+                  {% else %}
+                    <span>{{ material.subject }}</span>
+                  {% endif %}
+                  {% if material.offer_percentage %}<span class="offer-pill">{{ material.offer_percentage }}% OFF</span>{% endif %}
+                  <span class="provider-material-status {% if not material.is_published %}is-unpublished{% endif %}">{% if material.is_published %}Published{% else %}Unpublished{% endif %}</span>
+                </div>
+                <div class="provider-material-card-content">
+                  <p class="card-meta">{{ material.subject }} <span class="meta-dot">|</span> {{ material.class_level }}</p>
+                  <h3>{{ material.title }}</h3>
+                  <p class="provider-material-description">{{ material.description|truncatewords:18 }}</p>
+                  <p class="provider-material-price">
+                    {% if material.offer_percentage %}<del>₹{{ material.price|floatformat:0 }}</del>{% endif %}
+                    <strong>₹{{ material.sale_price|floatformat:0 }}</strong>
+                  </p>
+                  <div class="provider-material-actions">
+                    <a href="{% url 'material_provider:edit_material' material.id %}">Edit material</a>
+                    <form method="post" action="{% url 'material_provider:toggle_material_published' material.id %}">
+                      {% csrf_token %}
+                      <button type="submit">{% if material.is_published %}Unpublish{% else %}Publish{% endif %}</button>
+                    </form>
+                  </div>
+                </div>
+              </article>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="provider-material-empty">
+            {% if search_query or selected_category or selected_status %}No materials match these filters.{% else %}You have not uploaded any materials yet. Add your first one to get started.{% endif %}
+          </div>
+        {% endif %}
       </section>
     </main>
   </div>

@@ -68,7 +68,9 @@
       {% for material in materials %}
         <article class="material-card">
           <a class="cover-link" href="{% url 'public:detail' material.id %}" aria-label="View {{ material.title }}">
-            {% if material.cover_image %}
+            {% if material.cover_image_file %}
+              <img class="material-cover" src="{{ material.cover_image_file.url }}" alt="{{ material.subject }} class notes cover" loading="lazy">
+            {% elif material.cover_image %}
               <img class="material-cover" src="{{ material.cover_image }}" alt="{{ material.subject }} class notes cover" loading="lazy">
             {% else %}
               <div class="material-cover cover-placeholder cover-{{ forloop.counter|divisibleby:4|yesno:'four,one' }}">
@@ -76,6 +78,7 @@
               </div>
             {% endif %}
             <span class="level-pill">{{ material.class_level }}</span>
+            {% if material.offer_percentage %}<span class="offer-pill">{{ material.offer_percentage }}% OFF</span>{% endif %}
             {% if material.id in purchased_ids %}<span class="owned-pill">In your library</span>{% endif %}
           </a>
           <div class="material-info">
@@ -83,7 +86,7 @@
             <h3><a href="{% url 'public:detail' material.id %}">{{ material.title }}</a></h3>
             <p class="card-description">{{ material.description|truncatewords:18 }}</p>
             <div class="card-bottom">
-              <strong class="price">₹{{ material.price|floatformat:0 }}</strong>
+              <strong class="price">{% if material.offer_percentage %}<del>₹{{ material.price|floatformat:0 }}</del> {% endif %}₹{{ material.sale_price|floatformat:0 }}</strong>
               <a class="card-link" href="{% url 'public:detail' material.id %}">{% if material.id in purchased_ids %}Open notes{% else %}View notes{% endif %}<span aria-hidden="true">↗</span></a>
             </div>
           </div>

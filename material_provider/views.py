@@ -7,13 +7,21 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Q, Sum
 from django.db.models.functions import TruncWeek
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.views.decorators.http import require_POST
 
 from .models import Purchase, StudyMaterial
 
 
 class StudyMaterialForm(forms.ModelForm):
+    subject = forms.ChoiceField(label="Category")
+    new_subject = forms.CharField(
+        label="New category name",
+        max_length=80,
+        required=False,
+    )
+
     class Meta:
         model = StudyMaterial
         fields = (
@@ -22,15 +30,71 @@ class StudyMaterialForm(forms.ModelForm):
             "class_level",
             "description",
             "price",
-            "cover_image",
+            "cover_image_file",
             "notes_content",
             "notes_file",
+            "explanation_video",
+            "offer_percentage",
         )
-        labels = {"title": "Material name", "subject": "Related category"}
+        labels = {
+            "title": "Material name",
+            "class_level": "Class",
+            "description": "Description",
+            "price": "Amount",
+            "cover_image_file": "Cover picture",
+            "notes_content": "Material explanation",
+            "notes_file": "Study material file",
+            "explanation_video": "Explanation video (optional)",
+            "offer_percentage": "Offer rate (%)",
+        }
         widgets = {
             "description": forms.Textarea(attrs={"rows": 3}),
             "notes_content": forms.Textarea(attrs={"rows": 6}),
+            "cover_image_file": forms.ClearableFileInput(
+                attrs={"accept": "image/*"}
+            ),
+            "explanation_video": forms.ClearableFileInput(
+                attrs={"accept": "video/*"}
+            ),
+            "offer_percentage": forms.NumberInput(
+                attrs={"min": 0, "max": 100}
+            ),
         }
+
+    def __init__(self, *args, provider=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        categories = []
+        if provider is not None:
+            categories = list(
+                StudyMaterial.objects.filter(provider=provider)
+                .order_by("subject")
+                .values_list("subject", flat=True)
+                .distinct()
+            )
+        current_category = self.instance.subject if self.instance.pk else ""
+        if current_category and current_category not in categories:
+            categories.append(current_category)
+        self.fields["subject"].choices = [
+            ("", "Select a category"),
+            *((category, category) for category in categories),
+            ("__new__", "Add a new category"),
+        ]
+
+    def clean(self):
+        cleaned_data = super().clean()
+        category = cleaned_data.get("subject")
+        new_category = cleaned_data.get("new_subject", "").strip()
+        if category == "__new__":
+            if not new_category:
+                self.add_error("new_subject", "Enter a name for the new category.")
+            else:
+                cleaned_data["subject"] = new_category
+        elif new_category:
+            self.add_error(
+                "new_subject",
+                "Choose 'Add a new category' to use this field.",
+            )
+        return cleaned_data
 
 
 def material_provider_required(view):
@@ -143,18 +207,34 @@ def dashboard(request):
 def materials(request):
     provider_materials = StudyMaterial.objects.filter(provider=request.user)
     query = request.GET.get("q", "").strip()
+    category = request.GET.get("category", "").strip()
+    status = request.GET.get("status", "").strip()
     if query:
         provider_materials = provider_materials.filter(
-            Q(title__icontains=query) | Q(subject__icontains=query)
+            Q(title__icontains=query)
+            | Q(subject__icontains=query)
+            | Q(description__icontains=query)
         )
+    if category:
+        provider_materials = provider_materials.filter(subject=category)
+    if status == "published":
+        provider_materials = provider_materials.filter(is_published=True)
+    elif status == "unpublished":
+        provider_materials = provider_materials.filter(is_published=False)
     return render(
         request,
         "material_provider/materials.html",
         {
             "provider_materials": provider_materials.order_by("-created_at"),
-            "materials_count": StudyMaterial.objects.filter(
-                provider=request.user
-            ).count(),
+            "materials_count": StudyMaterial.objects.filter(provider=request.user).count(),
+            "categories": (
+                StudyMaterial.objects.filter(provider=request.user)
+                .order_by("subject")
+                .values_list("subject", flat=True)
+                .distinct()
+            ),
+            "selected_category": category,
+            "selected_status": status,
             "provider_name": request.user.get_full_name() or request.user.username,
             "search_query": query,
         },
@@ -163,7 +243,11 @@ def materials(request):
 
 @material_provider_required
 def add_material(request):
-    form = StudyMaterialForm(request.POST or None, request.FILES or None)
+    form = StudyMaterialForm(
+        request.POST or None,
+        request.FILES or None,
+        provider=request.user,
+    )
     if request.method == "POST" and form.is_valid():
         material = form.save(commit=False)
         material.provider = request.user
@@ -173,5 +257,44 @@ def add_material(request):
     return render(
         request,
         "material_provider/add_material.html",
-        {"form": form},
+        {"form": form, "is_edit": False},
     )
+
+
+@material_provider_required
+def edit_material(request, material_id):
+    material = get_object_or_404(
+        StudyMaterial,
+        pk=material_id,
+        provider=request.user,
+    )
+    form = StudyMaterialForm(
+        request.POST or None,
+        request.FILES or None,
+        instance=material,
+        provider=request.user,
+    )
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Your study material has been updated.")
+        return redirect("material_provider:materials")
+    return render(
+        request,
+        "material_provider/add_material.html",
+        {"form": form, "is_edit": True, "material": material},
+    )
+
+
+@material_provider_required
+@require_POST
+def toggle_material_published(request, material_id):
+    material = get_object_or_404(
+        StudyMaterial,
+        pk=material_id,
+        provider=request.user,
+    )
+    material.is_published = not material.is_published
+    material.save(update_fields=["is_published"])
+    status = "published" if material.is_published else "unpublished"
+    messages.success(request, f"Your study material is now {status}.")
+    return redirect("material_provider:materials")
