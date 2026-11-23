@@ -15,11 +15,25 @@ from .models import Purchase, StudyMaterial
 
 
 class StudyMaterialForm(forms.ModelForm):
-    subject = forms.ChoiceField(label="Category")
+    subject = forms.ChoiceField(
+        label="Category",
+        widget=forms.Select(attrs={"class": "form-select", "id": "id_subject"}),
+    )
     new_subject = forms.CharField(
         label="New category name",
         max_length=80,
         required=False,
+        widget=forms.TextInput(
+            attrs={
+                "placeholder": "Enter category name (e.g. Science, Mathematics)",
+                "class": "form-input",
+                "id": "id_new_subject",
+            }
+        ),
+    )
+    class_level = forms.ChoiceField(
+        label="Class",
+        widget=forms.Select(attrs={"class": "form-select", "id": "id_class_level"}),
     )
 
     class Meta:
@@ -48,16 +62,55 @@ class StudyMaterialForm(forms.ModelForm):
             "offer_percentage": "Offer rate (%)",
         }
         widgets = {
-            "description": forms.Textarea(attrs={"rows": 3}),
-            "notes_content": forms.Textarea(attrs={"rows": 6}),
-            "cover_image_file": forms.ClearableFileInput(
-                attrs={"accept": "image/*"}
+            "title": forms.TextInput(
+                attrs={
+                    "placeholder": "e.g., Complete Class 10 Physics Mechanics Notes",
+                    "class": "form-input",
+                    "id": "id_title",
+                }
             ),
-            "explanation_video": forms.ClearableFileInput(
-                attrs={"accept": "video/*"}
+            "description": forms.Textarea(
+                attrs={
+                    "rows": 3,
+                    "placeholder": "Brief summary of what this study material covers (visible to students on cards)...",
+                    "class": "form-textarea",
+                    "id": "id_description",
+                }
+            ),
+            "notes_content": forms.Textarea(
+                attrs={
+                    "rows": 6,
+                    "placeholder": "Write or paste the full study notes, key formulas, summary, and explanations here...",
+                    "class": "form-textarea",
+                    "id": "id_notes_content",
+                }
+            ),
+            "price": forms.NumberInput(
+                attrs={
+                    "min": "0",
+                    "step": "1",
+                    "placeholder": "0",
+                    "class": "form-input",
+                    "id": "id_price",
+                }
             ),
             "offer_percentage": forms.NumberInput(
-                attrs={"min": 0, "max": 100}
+                attrs={
+                    "min": 0,
+                    "max": 100,
+                    "placeholder": "0",
+                    "class": "form-input",
+                    "id": "id_offer_percentage",
+                }
+            ),
+            "cover_image_file": forms.ClearableFileInput(
+                attrs={"accept": "image/*", "class": "file-input-hidden", "id": "id_cover_image_file"}
+            ),
+            "notes_file": forms.ClearableFileInput(
+                attrs={"accept": ".pdf,.doc,.docx,.txt,.zip", "class": "file-input-hidden", "id": "id_notes_file"}
+            ),
+            "explanation_video": forms.ClearableFileInput(
+                attrs={"accept": "video/*", "class": "file-input-hidden", "id": "id_explanation_video"}
             ),
         }
 
@@ -78,6 +131,18 @@ class StudyMaterialForm(forms.ModelForm):
             ("", "Select a category"),
             *((category, category) for category in categories),
             ("__new__", "Add a new category"),
+        ]
+
+        current_class = self.instance.class_level if self.instance.pk else ""
+        classes = [c for c, _ in StudyMaterial.CLASS_LEVELS]
+        if current_class and current_class not in classes:
+            classes.append(current_class)
+        posted_class = self.data.get("class_level") if self.data else None
+        if posted_class and posted_class not in classes:
+            classes.append(posted_class)
+        self.fields["class_level"].choices = [
+            ("", "Select target class"),
+            *((c, c) for c in classes),
         ]
 
     def clean(self):

@@ -5,42 +5,331 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% if is_edit %}Edit{% else %}Add{% endif %} study material — StudyNest</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'css/site.css' %}">
 </head>
-<body class="provider-body">
-  <main class="provider-form-page">
-    <a class="provider-back" href="{% url 'material_provider:materials' %}">← Back to materials</a>
-    <section class="provider-form-card">
-      <span class="eyebrow eyebrow-dark">YOUR MATERIALS</span>
-      <h1>{% if is_edit %}Edit study material{% else %}Add new study material{% endif %}</h1>
-      <p>Share your notes with students on StudyNest.</p>
-      <form method="post" enctype="multipart/form-data" class="provider-material-form">
+<body class="provider-body form-body-bg">
+  <div class="provider-form-wrapper">
+    <!-- Top Header Bar -->
+    <header class="form-header-bar">
+      <a class="provider-back-btn" href="{% url 'material_provider:materials' %}">
+        <span aria-hidden="true">←</span> Back to materials
+      </a>
+      <span class="form-context-badge">
+        {% if is_edit %}Editing: {{ material.title|truncatechars:26 }}{% else %}Material Provider Studio{% endif %}
+      </span>
+    </header>
+
+    <!-- Main Form Container Card -->
+    <main class="provider-form-card">
+      <div class="form-title-area">
+        <div class="title-icon-badge" aria-hidden="true"><span>📚</span></div>
+        <div>
+          <span class="eyebrow eyebrow-dark">YOUR STUDY MATERIALS</span>
+          <h1>{% if is_edit %}Edit Study Material{% else %}Add New Study Material{% endif %}</h1>
+          <p>Share high-quality notes, structured learning resources, and video lectures with students.</p>
+        </div>
+      </div>
+
+      {% if form.non_field_errors %}
+        <div class="form-non-field-errors">
+          {{ form.non_field_errors }}
+        </div>
+      {% endif %}
+
+      <form method="post" enctype="multipart/form-data" class="provider-enhanced-form" novalidate>
         {% csrf_token %}
-        {% for field in form %}
-          {% if field.name != "new_subject" %}
-          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-          {{ field }}
-          {% if field.help_text %}<small class="field-help">{{ field.help_text }}</small>{% endif %}
-          {% if field.errors %}<div class="field-error">{{ field.errors }}</div>{% endif %}
-          {% if field.name == "subject" %}
-            <div class="new-category-field" id="new-category-field" {% if form.subject.value != "__new__" %}hidden{% endif %}>
-              <label for="{{ form.new_subject.id_for_label }}">{{ form.new_subject.label }}</label>
+
+        <!-- SECTION 1: Basic Information -->
+        <section class="form-section">
+          <div class="section-title-row">
+            <span class="section-num">1</span>
+            <div>
+              <h2>Basic Information</h2>
+              <p>Title, academic category, and target class</p>
+            </div>
+          </div>
+
+          <div class="form-group full-width">
+            <label for="{{ form.title.id_for_label }}">
+              {{ form.title.label }} <span class="required-star">*</span>
+            </label>
+            {{ form.title }}
+            {% if form.title.errors %}<div class="field-error">{{ form.title.errors }}</div>{% endif %}
+            <small class="field-hint">A clear, descriptive name students will search for (e.g., "Class 10 Biology Genetics Notes").</small>
+          </div>
+
+          <div class="form-row two-cols">
+            <div class="form-group">
+              <label for="{{ form.subject.id_for_label }}">
+                {{ form.subject.label }} <span class="required-star">*</span>
+              </label>
+              {{ form.subject }}
+              {% if form.subject.errors %}<div class="field-error">{{ form.subject.errors }}</div>{% endif %}
+            </div>
+
+            <div class="form-group">
+              <label for="{{ form.class_level.id_for_label }}">
+                {{ form.class_level.label }} <span class="required-star">*</span>
+              </label>
+              {{ form.class_level }}
+              {% if form.class_level.errors %}<div class="field-error">{{ form.class_level.errors }}</div>{% endif %}
+            </div>
+          </div>
+
+          <div class="new-category-field" id="new-category-field" {% if form.subject.value != "__new__" %}hidden{% endif %}>
+            <div class="form-group full-width">
+              <label for="{{ form.new_subject.id_for_label }}">
+                {{ form.new_subject.label }} <span class="required-star">*</span>
+              </label>
               {{ form.new_subject }}
               {% if form.new_subject.errors %}<div class="field-error">{{ form.new_subject.errors }}</div>{% endif %}
+              <small class="field-hint">This new category will be created and saved with your study material.</small>
             </div>
-          {% endif %}
-          {% endif %}
-        {% endfor %}
-        <button class="button button-primary" type="submit">{% if is_edit %}Save changes{% else %}Add material{% endif %} <span aria-hidden="true">→</span></button>
+          </div>
+        </section>
+
+        <!-- SECTION 2: Pricing & Discounts -->
+        <section class="form-section">
+          <div class="section-title-row">
+            <span class="section-num">2</span>
+            <div>
+              <h2>Pricing &amp; Offers</h2>
+              <p>Set student purchase price and optional discount percentage</p>
+            </div>
+          </div>
+
+          <div class="form-row two-cols">
+            <div class="form-group">
+              <label for="{{ form.price.id_for_label }}">
+                {{ form.price.label }} (₹) <span class="required-star">*</span>
+              </label>
+              <div class="input-with-prefix">
+                <span class="input-prefix" aria-hidden="true">₹</span>
+                {{ form.price }}
+              </div>
+              {% if form.price.errors %}<div class="field-error">{{ form.price.errors }}</div>{% endif %}
+              <small class="field-hint">Regular price before any discounts.</small>
+            </div>
+
+            <div class="form-group">
+              <label for="{{ form.offer_percentage.id_for_label }}">
+                {{ form.offer_percentage.label }}
+              </label>
+              <div class="input-with-prefix">
+                <span class="input-prefix" aria-hidden="true">%</span>
+                {{ form.offer_percentage }}
+              </div>
+              {% if form.offer_percentage.errors %}<div class="field-error">{{ form.offer_percentage.errors }}</div>{% endif %}
+              <small class="field-hint">Leave at 0 if no promotional discount applies.</small>
+            </div>
+          </div>
+
+          <!-- Dynamic Pricing Live Preview Card -->
+          <div class="pricing-summary-card" id="pricing-summary">
+            <div class="summary-item">
+              <span class="summary-label">Standard Price:</span>
+              <strong id="summary-original-price">₹0</strong>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Discount Applied:</span>
+              <span class="summary-discount-badge" id="summary-discount-badge">0% OFF</span>
+            </div>
+            <div class="summary-item summary-highlight">
+              <span class="summary-label">Student Pays:</span>
+              <strong class="summary-final-price" id="summary-final-price">₹0</strong>
+            </div>
+          </div>
+        </section>
+
+        <!-- SECTION 3: Descriptions & Notes -->
+        <section class="form-section">
+          <div class="section-title-row">
+            <span class="section-num">3</span>
+            <div>
+              <h2>Description &amp; Notes Content</h2>
+              <p>Overview for the catalog and written notes for buyers</p>
+            </div>
+          </div>
+
+          <div class="form-group full-width">
+            <label for="{{ form.description.id_for_label }}">
+              {{ form.description.label }} <span class="required-star">*</span>
+            </label>
+            {{ form.description }}
+            {% if form.description.errors %}<div class="field-error">{{ form.description.errors }}</div>{% endif %}
+            <small class="field-hint">A concise summary shown on the preview card and explore page (2-3 sentences recommended).</small>
+          </div>
+
+          <div class="form-group full-width">
+            <label for="{{ form.notes_content.id_for_label }}">
+              {{ form.notes_content.label }}
+            </label>
+            {{ form.notes_content }}
+            {% if form.notes_content.errors %}<div class="field-error">{{ form.notes_content.errors }}</div>{% endif %}
+            <small class="field-hint">Detailed written notes, key formulas, or summary accessible to students after purchasing.</small>
+          </div>
+        </section>
+
+        <!-- SECTION 4: Media & Files Upload -->
+        <section class="form-section">
+          <div class="section-title-row">
+            <span class="section-num">4</span>
+            <div>
+              <h2>Files &amp; Attachments</h2>
+              <p>Cover picture, downloadable notes document, and optional video explanation</p>
+            </div>
+          </div>
+
+          <div class="upload-grid">
+            <!-- Cover Picture Upload Card -->
+            <div class="upload-card" id="card-cover">
+              <div class="upload-card-header">
+                <span class="upload-icon" aria-hidden="true">🖼️</span>
+                <div>
+                  <strong>{{ form.cover_image_file.label }}</strong>
+                  <small>Card thumbnail (JPG, PNG)</small>
+                </div>
+              </div>
+              <label class="custom-file-dropzone" for="{{ form.cover_image_file.id_for_label }}">
+                <span class="dropzone-action-btn">Choose Image</span>
+                <span class="dropzone-file-name" id="name-cover-file">
+                  {% if is_edit and material.cover_image_file %}Current: {{ material.cover_image_file.name }}{% else %}No image chosen{% endif %}
+                </span>
+              </label>
+              {{ form.cover_image_file }}
+              {% if form.cover_image_file.errors %}<div class="field-error">{{ form.cover_image_file.errors }}</div>{% endif %}
+              <div class="image-preview-wrap" id="cover-preview-wrap" {% if not is_edit or not material.cover_image_file %}hidden{% endif %}>
+                <img id="cover-preview-img" src="{% if is_edit and material.cover_image_file %}{{ material.cover_image_file.url }}{% endif %}" alt="Cover preview">
+              </div>
+            </div>
+
+            <!-- Notes File Upload Card -->
+            <div class="upload-card" id="card-notes">
+              <div class="upload-card-header">
+                <span class="upload-icon" aria-hidden="true">📄</span>
+                <div>
+                  <strong>{{ form.notes_file.label }}</strong>
+                  <small>Study document (PDF, DOCX)</small>
+                </div>
+              </div>
+              <label class="custom-file-dropzone" for="{{ form.notes_file.id_for_label }}">
+                <span class="dropzone-action-btn">Choose Document</span>
+                <span class="dropzone-file-name" id="name-notes-file">
+                  {% if is_edit and material.notes_file %}Current: {{ material.notes_file.name }}{% else %}No document chosen{% endif %}
+                </span>
+              </label>
+              {{ form.notes_file }}
+              {% if form.notes_file.errors %}<div class="field-error">{{ form.notes_file.errors }}</div>{% endif %}
+            </div>
+
+            <!-- Explanation Video Upload Card -->
+            <div class="upload-card" id="card-video">
+              <div class="upload-card-header">
+                <span class="upload-icon" aria-hidden="true">🎬</span>
+                <div>
+                  <strong>{{ form.explanation_video.label }}</strong>
+                  <small>Video lecture (MP4, WebM)</small>
+                </div>
+              </div>
+              <label class="custom-file-dropzone" for="{{ form.explanation_video.id_for_label }}">
+                <span class="dropzone-action-btn">Choose Video</span>
+                <span class="dropzone-file-name" id="name-video-file">
+                  {% if is_edit and material.explanation_video %}Current: {{ material.explanation_video.name }}{% else %}No video chosen{% endif %}
+                </span>
+              </label>
+              {{ form.explanation_video }}
+              {% if form.explanation_video.errors %}<div class="field-error">{{ form.explanation_video.errors }}</div>{% endif %}
+            </div>
+          </div>
+        </section>
+
+        <!-- Form Submission Footer Actions -->
+        <div class="form-footer-actions">
+          <a class="button button-outline form-cancel-btn" href="{% url 'material_provider:materials' %}">Cancel</a>
+          <button class="button button-primary submit-main-btn" type="submit">
+            <span>{% if is_edit %}Save Changes{% else %}Add Material{% endif %}</span>
+            <span aria-hidden="true">→</span>
+          </button>
+        </div>
       </form>
-    </section>
-  </main>
+    </main>
+  </div>
+
   <script>
+    // 1. Dynamic New Category Field Handler
     const categorySelect = document.getElementById("id_subject");
     const newCategoryField = document.getElementById("new-category-field");
-    categorySelect.addEventListener("change", function () {
-      newCategoryField.hidden = this.value !== "__new__";
-    });
+    const newCategoryInput = document.getElementById("id_new_subject");
+
+    if (categorySelect && newCategoryField) {
+      categorySelect.addEventListener("change", function () {
+        const isNew = this.value === "__new__";
+        newCategoryField.hidden = !isNew;
+        if (isNew && newCategoryInput) {
+          newCategoryInput.focus();
+        }
+      });
+    }
+
+    // 2. Real-time Live Price Calculator
+    const priceInput = document.getElementById("id_price");
+    const offerInput = document.getElementById("id_offer_percentage");
+    const summaryOriginal = document.getElementById("summary-original-price");
+    const summaryDiscount = document.getElementById("summary-discount-badge");
+    const summaryFinal = document.getElementById("summary-final-price");
+
+    function updatePricingSummary() {
+      const price = parseFloat(priceInput ? priceInput.value : 0) || 0;
+      const offer = parseFloat(offerInput ? offerInput.value : 0) || 0;
+      const clampedOffer = Math.min(100, Math.max(0, offer));
+      const finalPrice = Math.round(price * (100 - clampedOffer) / 100);
+
+      if (summaryOriginal) summaryOriginal.textContent = "₹" + Math.round(price);
+      if (summaryDiscount) {
+        summaryDiscount.textContent = clampedOffer > 0 ? (clampedOffer + "% OFF") : "No discount";
+        summaryDiscount.className = clampedOffer > 0 ? "summary-discount-badge has-offer" : "summary-discount-badge";
+      }
+      if (summaryFinal) summaryFinal.textContent = "₹" + finalPrice;
+    }
+
+    if (priceInput) priceInput.addEventListener("input", updatePricingSummary);
+    if (offerInput) offerInput.addEventListener("input", updatePricingSummary);
+    updatePricingSummary();
+
+    // 3. File Upload Visual Feedback & Image Preview
+    function bindFileInputFeedback(inputId, labelId, isImage = false, previewWrapId = null, previewImgId = null) {
+      const fileInput = document.getElementById(inputId);
+      const nameLabel = document.getElementById(labelId);
+      if (!fileInput || !nameLabel) return;
+
+      fileInput.addEventListener("change", function () {
+        if (this.files && this.files.length > 0) {
+          const file = this.files[0];
+          nameLabel.textContent = "✓ " + file.name + " (" + (file.size / 1024).toFixed(0) + " KB)";
+          nameLabel.classList.add("file-selected");
+
+          if (isImage && previewWrapId && previewImgId) {
+            const wrap = document.getElementById(previewWrapId);
+            const img = document.getElementById(previewImgId);
+            if (wrap && img) {
+              const reader = new FileReader();
+              reader.onload = function (e) {
+                img.src = e.target.result;
+                wrap.hidden = false;
+              };
+              reader.readAsDataURL(file);
+            }
+          }
+        }
+      });
+    }
+
+    bindFileInputFeedback("id_cover_image_file", "name-cover-file", true, "cover-preview-wrap", "cover-preview-img");
+    bindFileInputFeedback("id_notes_file", "name-notes-file");
+    bindFileInputFeedback("id_explanation_video", "name-video-file");
   </script>
 </body>
 </html>
